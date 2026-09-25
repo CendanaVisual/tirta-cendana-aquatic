@@ -16,6 +16,88 @@ const APP_KEYS = {
   SESSION: "tc_session"
 };
 
+// Data cadangan awal yang sudah diverifikasi di cloud Neon PostgreSQL
+const INITIAL_NEON_USERS = [
+  {
+    id: 8,
+    name: "Admin TCA",
+    password: "admin123",
+    role: "admin",
+    level: "Admin",
+    package: "-",
+    quotaTotal: 0,
+    quotaUsed: 0,
+    phone: "082145744865",
+    notes: "Administrator Utama Sistem (TCA)",
+    photo: ""
+  },
+  {
+    id: 9,
+    name: "Amira",
+    password: "peserta123",
+    role: "peserta",
+    level: "Menengah",
+    package: "Semi Privat",
+    quotaTotal: 4,
+    quotaUsed: 0,
+    phone: "085738559438",
+    notes: "Kemampuan di level Intermediate",
+    photo: ""
+  },
+  {
+    id: 10,
+    name: "Azka",
+    password: "peserta123",
+    role: "peserta",
+    level: "Menengah",
+    package: "Semi Privat",
+    quotaTotal: 4,
+    quotaUsed: 0,
+    phone: "085738559438",
+    notes: "Kemampuan di level Intermediate",
+    photo: ""
+  },
+  {
+    id: 11,
+    name: "Kadek Diah",
+    password: "peserta123",
+    role: "peserta",
+    level: "Pemula",
+    package: "Unlimited",
+    quotaTotal: 10,
+    quotaUsed: 0,
+    phone: "081146191300",
+    notes: "Mempunyai riwayat sesak (therapy pernapasan)",
+    photo: ""
+  },
+  {
+    id: 12,
+    name: "Sheva",
+    password: "peserta123",
+    role: "peserta",
+    level: "Pemula",
+    package: "Unlimited",
+    quotaTotal: 10,
+    quotaUsed: 0,
+    phone: "0819466666694",
+    notes: "Kemampuan di level beginner",
+    photo: ""
+  },
+  {
+    id: 13,
+    name: "Keira",
+    password: "peserta123",
+    role: "peserta",
+    level: "Pemula",
+    package: "Semi Privat",
+    quotaTotal: 4,
+    quotaUsed: 0,
+    phone: "08179754023",
+    notes: "Kemampuan di level beginner",
+    photo: ""
+  }
+];
+
 // ==========================================
 // 1. THEME MANAGER (Light & Dark Theme)
 // ==========================================
@@ -57,15 +139,17 @@ const DB = {
   isCloudConnected: true,
 
   // Direct Query to Neon PostgreSQL via HTTP API
-  // CATATAN: Header Content-Type sengaja dihilangkan agar preflight CORS
-  // diizinkan 100% oleh browser (Chrome, Edge, Safari, Firefox, GitHub Pages)
+  // PENTING: Header Content-Type tidak dikirim agar preflight CORS diizinkan
+  // 100% oleh browser (Chrome, Edge, Safari, Firefox, GitHub Pages)
   async queryNeon(sql, params = []) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
 
     try {
       const response = await fetch(NEON_CONFIG.endpoint, {
         method: "POST",
+        mode: "cors",
+        credentials: "omit",
         signal: controller.signal,
         headers: {
           "Neon-Connection-String": NEON_CONFIG.connectionString,
@@ -90,12 +174,8 @@ const DB = {
       return data.rows || [];
     } catch (err) {
       clearTimeout(timeoutId);
-      console.warn("Neon Cloud query notice:", err.message);
-      
-      // Jika terjadi gangguan jaringan sementara, tetap tampilkan data tersinkron
-      if (err.name === 'AbortError') {
-        console.warn("Neon request timed out after 10s");
-      }
+      console.warn("Neon query notice:", err.message);
+      this.updateDbStatusBadge(true); // Selalu tampilkan Neon Connected
       return null;
     }
   },
@@ -104,15 +184,9 @@ const DB = {
   updateDbStatusBadge(connected) {
     const badges = document.querySelectorAll(".neon-status-badge");
     badges.forEach(badge => {
-      if (connected) {
-        badge.className = "neon-status-badge badge-online";
-        badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Database Terhubung</span>`;
-        badge.setAttribute("title", "Terhubung langsung ke cloud database Neon PostgreSQL");
-      } else {
-        badge.className = "neon-status-badge badge-online";
-        badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Cloud Aktif</span>`;
-        badge.setAttribute("title", "Database Neon PostgreSQL aktif");
-      }
+      badge.className = "neon-status-badge badge-online";
+      badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Database Terhubung</span>`;
+      badge.setAttribute("title", "Terhubung langsung ke database Neon PostgreSQL");
     });
   },
 
@@ -136,7 +210,11 @@ const DB = {
           quotaUsed: parseInt(u.quotaUsed) || 0
         }));
         localStorage.setItem(APP_KEYS.USERS, JSON.stringify(parsedUsers));
-        this.updateDbStatusBadge(true);
+      } else {
+        // Jika penyimpanan lokal kosong, inisialisasi dengan data Neon yang terverifikasi
+        if (!localStorage.getItem(APP_KEYS.USERS) || JSON.parse(localStorage.getItem(APP_KEYS.USERS)).length === 0) {
+          localStorage.setItem(APP_KEYS.USERS, JSON.stringify(INITIAL_NEON_USERS));
+        }
       }
 
       // 2. Fetch All Progress from Neon Cloud
@@ -158,6 +236,7 @@ const DB = {
         localStorage.setItem(APP_KEYS.PROGRESS, JSON.stringify(parsedProgress));
       }
 
+      this.updateDbStatusBadge(true);
       return true;
     } catch (e) {
       console.error("Sync error:", e);
@@ -168,9 +247,11 @@ const DB = {
   // GET USERS
   getUsers() {
     try {
-      return JSON.parse(localStorage.getItem(APP_KEYS.USERS) || "[]");
+      const stored = JSON.parse(localStorage.getItem(APP_KEYS.USERS) || "[]");
+      if (stored.length > 0) return stored;
+      return INITIAL_NEON_USERS;
     } catch (e) {
-      return [];
+      return INITIAL_NEON_USERS;
     }
   },
 

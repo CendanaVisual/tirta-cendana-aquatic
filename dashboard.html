@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Peserta | Tirta Cendana Aquatic</title>
   <link rel="icon" type="image/png" href="assets/logo.png" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2.2.0" />
   <style>
     main {
       max-width: 1040px;
@@ -281,7 +281,7 @@
     </div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2.2.0"></script>
   <script>
     const session = DB.getSession();
     if (!session || session.role !== "peserta") {
@@ -291,7 +291,9 @@
     document.getElementById("welcomeName").textContent = `Selamat Datang, ${session.name}`;
 
     async function initDashboard() {
-      // Sync latest data from Neon Cloud
+      // Immediate render
+      renderDashboard();
+      // Sync from Neon Cloud
       await DB.sync();
       renderDashboard();
     }

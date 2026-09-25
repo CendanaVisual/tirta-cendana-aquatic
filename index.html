@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Tirta Cendana Aquatic | Portal Masuk</title>
   <link rel="icon" type="image/png" href="assets/logo.png" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=2.2.0" />
   <style>
     .login-wrapper {
       min-height: 100vh;
@@ -149,7 +149,7 @@
           <div class="form-group">
             <label for="namaSelect">Nama Pengguna / Akun</label>
             <select id="namaSelect" required>
-              <option value="">-- Memuat data dari database... --</option>
+              <option value="">-- Pilih Akun Anda --</option>
             </select>
           </div>
 
@@ -224,7 +224,7 @@
     </div>
   </div>
 
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=2.2.0"></script>
   <script>
     setupPasswordToggle("#passwordInput", "#toggleLoginPassword");
     setupPasswordToggle("#adminPasswordInput", "#toggleAdminPassword");
@@ -235,32 +235,27 @@
     const cardTitle = document.getElementById("cardTitle");
     const cardSubtitle = document.getElementById("cardSubtitle");
 
+    function renderDropdown(users) {
+      if (!users || users.length === 0) return;
+      select.innerHTML = '<option value="">-- Pilih Akun Anda --</option>';
+      users.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u.name;
+        opt.textContent = `${u.name} (${u.role === 'admin' ? 'Admin' : 'Peserta'})`;
+        select.appendChild(opt);
+      });
+    }
+
     // Initialize application and synchronize with Neon
     async function init() {
-      // Sync with Neon Database
-      await DB.sync();
-      const users = DB.getUsers();
+      // 1. Render immediate users (fallback / cache)
+      const immediateUsers = DB.getUsers();
+      renderDropdown(immediateUsers);
 
-      if (!users || users.length === 0) {
-        // First-time setup
-        loginForm.classList.add("hidden");
-        firstTimeSetup.classList.remove("hidden");
-        cardTitle.textContent = "Inisialisasi Sistem Cloud";
-        cardSubtitle.textContent = "Buat akun Administrator pertama untuk mengalirkan data ke Neon";
-      } else {
-        loginForm.classList.remove("hidden");
-        firstTimeSetup.classList.add("hidden");
-        cardTitle.textContent = "Masuk ke Portal";
-        cardSubtitle.textContent = "Pilih akun dan masukkan kata sandi Anda";
-        
-        select.innerHTML = '<option value="">-- Pilih Akun Anda --</option>';
-        users.forEach(u => {
-          const opt = document.createElement("option");
-          opt.value = u.name;
-          opt.textContent = `${u.name} (${u.role === 'admin' ? 'Admin' : 'Peserta'})`;
-          select.appendChild(opt);
-        });
-      }
+      // 2. Sync from Neon Cloud
+      await DB.sync();
+      const freshUsers = DB.getUsers();
+      renderDropdown(freshUsers);
     }
 
     // First time admin setup
@@ -291,7 +286,6 @@
         notes: "Administrator Utama Sistem"
       };
 
-      // Flow to Neon Cloud!
       const saved = await DB.addUser(newAdmin);
       DB.setSession({
         id: saved.id,
