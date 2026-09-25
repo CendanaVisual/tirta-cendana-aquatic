@@ -185,7 +185,7 @@ const DB = {
     const badges = document.querySelectorAll(".neon-status-badge");
     badges.forEach(badge => {
       badge.className = "neon-status-badge badge-online";
-      badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Database Terhubung</span>`;
+      badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Online</span>`;
       badge.setAttribute("title", "Terhubung langsung ke database Neon PostgreSQL");
     });
   },
