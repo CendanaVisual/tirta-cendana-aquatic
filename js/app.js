@@ -312,6 +312,10 @@ const DB = {
       users[idx] = { ...users[idx], ...user };
       localStorage.setItem(APP_KEYS.USERS, JSON.stringify(users));
     }
+    const currentSession = this.getSession();
+    if (currentSession && currentSession.id === user.id) {
+      this.setSession({ ...currentSession, ...user });
+    }
   },
 
   // DELETE USER (Direct to Neon Cloud)
@@ -427,7 +431,46 @@ function showMessage(targetId, text, type = "success", duration = 3500) {
   }, duration);
 }
 
+// ==========================================
+// 5. IMAGE OPTIMIZER HELPER (UP TO 5MB)
+// ==========================================
+function compressImage(file, maxDimension = 800, quality = 0.88) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Gagal membaca berkas gambar."));
+    reader.onload = (evt) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Format berkas gambar tidak didukung."));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.src = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // Auto-run theme initialization
 document.addEventListener("DOMContentLoaded", () => {
   ThemeManager.init();
 });
+

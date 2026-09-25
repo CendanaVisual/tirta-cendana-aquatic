@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel | Tirta Cendana Aquatic</title>
   <link rel="icon" type="image/png" href="assets/logo.png" />
-  <link rel="stylesheet" href="css/style.css?v=2.2.0" />
+  <link rel="stylesheet" href="css/style.css?v=2.3.0" />
   <style>
     main {
       max-width: 1120px;
@@ -327,7 +327,7 @@
 
   </main>
 
-  <script src="js/app.js?v=2.2.0"></script>
+  <script src="js/app.js?v=2.3.0"></script>
   <script>
     const session = DB.getSession();
     if (!session || session.role !== "admin") {
@@ -397,8 +397,15 @@
         return `
           <tr>
             <td>
-              <div style="font-weight:600; color:var(--text-main); font-size:0.95rem;">${u.name}</div>
-              ${u.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);">${u.notes}</div>` : ""}
+              <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:38px; height:38px; border-radius:50%; overflow:hidden; background:var(--gold-soft); display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid rgba(212,175,55,0.35);">
+                  ${u.photo ? `<img src="${u.photo}" style="width:100%; height:100%; object-fit:cover;" alt="${u.name}"/>` : `<span style="font-size:16px;">🏊</span>`}
+                </div>
+                <div>
+                  <div style="font-weight:600; color:var(--text-main); font-size:0.95rem;">${u.name}</div>
+                  ${u.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);">${u.notes}</div>` : ""}
+                </div>
+              </div>
             </td>
             <td>
               <span class="${u.role === 'admin' ? 'badge-admin' : 'badge-peserta'}">

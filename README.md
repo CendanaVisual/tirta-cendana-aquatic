@@ -42,6 +42,11 @@ Aplikasi web manajemen les renang eksklusif **Tirta Cendana Aquatic**, terhubung
    - Dilengkapi sistem **Inisialisasi Otomatis**: Jika database masih kosong, aplikasi secara cerdas memandu pembuatan Akun Administrator Utama langsung ke Neon.
    - Dilengkapi fitur **Backup & Restore (Ekspor/Impor JSON)** di Admin Panel.
 
+9. **Unggah Foto Profil Hingga 5MB & Tersimpan di Cloud Neon**
+   - Mendukung unggahan berkas foto profil peserta hingga ukuran **5MB**.
+   - Dilengkapi modul kompresi kanvas otomatis di sisi klien (*client-side canvas compression*) yang mengoptimalkan dimensi gambar tanpa mengurangi ketajaman visual, sehingga proses penyimpanan ke kolom `photo` di Neon PostgreSQL berlangsung sangat cepat, hemat kuota internet, dan terbebas dari kendala batas payload HTTP.
+   - Foto profil peserta langsung tampil di Dashboard Peserta dan tabel profil Admin Panel.
+
 ---
 
 ## 📁 Struktur Berkas Proyek

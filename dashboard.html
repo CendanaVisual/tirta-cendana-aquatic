@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Peserta | Tirta Cendana Aquatic</title>
   <link rel="icon" type="image/png" href="assets/logo.png" />
-  <link rel="stylesheet" href="css/style.css?v=2.2.0" />
+  <link rel="stylesheet" href="css/style.css?v=2.3.0" />
   <style>
     main {
       max-width: 1040px;
@@ -232,7 +232,7 @@
             <img id="avatarImage" style="display:none;" alt="Foto Profil" />
           </div>
           <label class="btn-outline btn-sm" style="cursor:pointer; display:inline-flex;">
-            <span>📷 Ganti Foto</span>
+            <span>📷 Ganti Foto (Maks 5MB)</span>
             <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)" />
           </label>
         </div>
@@ -281,7 +281,7 @@
     </div>
   </div>
 
-  <script src="js/app.js?v=2.2.0"></script>
+  <script src="js/app.js?v=2.3.0"></script>
   <script>
     const session = DB.getSession();
     if (!session || session.role !== "peserta") {
@@ -486,24 +486,34 @@
       renderDashboard();
     }
 
-    // Photo Upload
+    // Photo Upload (Maksimal 5MB)
     async function handlePhotoUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
-      if (file.size > 850000) {
-        alert("Ukuran foto maksimal ±800KB. Silakan gunakan foto yang lebih kecil.");
+
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      if (file.size > MAX_SIZE) {
+        const mb = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Ukuran berkas maksimal 5MB.\nUkuran berkas Anda: ${mb}MB. Silakan pilih foto dengan ukuran lebih kecil.`);
         return;
       }
-      const reader = new FileReader();
-      reader.onload = async function(evt) {
+
+      const avatarPlaceholder = document.getElementById("avatarPlaceholder");
+      avatarPlaceholder.textContent = "⏳";
+
+      try {
+        const photoData = await compressImage(file, 800, 0.88);
         const user = getCurrentUser();
         if (user) {
-          user.photo = evt.target.result;
+          user.photo = photoData;
           await DB.updateUser(user);
           renderDashboard();
+          alert("Foto profil berhasil diunggah dan disimpan ke database Neon!");
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        alert("Gagal memproses foto: " + err.message);
+        renderDashboard();
+      }
     }
 
     // Detail Modal
