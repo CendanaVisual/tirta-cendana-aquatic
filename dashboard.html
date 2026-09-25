@@ -7,7 +7,6 @@
   <link rel="icon" type="image/png" href="assets/logo.png" />
   <link rel="stylesheet" href="css/style.css" />
   <style>
-    /* Specific dashboard enhancements */
     main {
       max-width: 1040px;
       margin: 0 auto;
@@ -200,10 +199,12 @@
         </div>
       </div>
       <div class="header-actions">
+        <div class="neon-status-badge badge-online">
+          <span class="status-dot online"></span> <span>Neon Connected</span>
+        </div>
         <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Ganti Tema">
           <span class="theme-icon">🌙</span> <span class="theme-text">Gelap</span>
         </button>
-        <span id="headerUserName" style="font-size:0.88rem; font-weight:600; color:var(--text-secondary); display:none;" class="desktop-only"></span>
         <button class="btn-logout" onclick="handleLogout()">Keluar</button>
       </div>
     </div>
@@ -212,7 +213,7 @@
   <main>
     <div class="welcome-header">
       <h2 id="welcomeName">Selamat Datang</h2>
-      <p>Pantau detail profil, sisa kuota latihan renang, dan catatan evaluasi pelatih Anda</p>
+      <p>Data kuota dan riwayat evaluasi tersinkronisasi langsung dari cloud Neon PostgreSQL</p>
     </div>
 
     <!-- QUICK STATS -->
@@ -245,7 +246,7 @@
 
           <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
             <button class="btn-outline btn-sm" id="btnStartEdit" onclick="startEditProfile()">✏️ Edit Profil</button>
-            <button class="btn-gold btn-sm" id="btnSaveEdit" style="display:none;" onclick="saveEditedProfile()">✓ Simpan Perubahan</button>
+            <button class="btn-gold btn-sm" id="btnSaveEdit" style="display:none;" onclick="saveEditedProfile()">✓ Simpan ke Database</button>
             <button class="btn-outline btn-sm" id="btnCancelEdit" style="display:none;" onclick="cancelEditProfile()">Batal</button>
           </div>
         </div>
@@ -282,13 +283,18 @@
 
   <script src="js/app.js"></script>
   <script>
-    // Authentication guard
     const session = DB.getSession();
     if (!session || session.role !== "peserta") {
       window.location.href = "index.html";
     }
 
     document.getElementById("welcomeName").textContent = `Selamat Datang, ${session.name}`;
+
+    async function initDashboard() {
+      // Sync latest data from Neon Cloud
+      await DB.sync();
+      renderDashboard();
+    }
 
     function getCurrentUser() {
       return DB.getUsers().find(u => u.id === session.id);
@@ -298,7 +304,6 @@
       return DB.getProgress().filter(p => p.userId === session.id);
     }
 
-    // Render Dashboard
     function renderDashboard() {
       const user = getCurrentUser();
       if (!user) {
@@ -381,8 +386,8 @@
         progressContainer.innerHTML = `
           <div style="text-align:center; padding:30px 10px; color:var(--text-muted);">
             <div style="font-size:2rem; margin-bottom:8px;">🌊</div>
-            <p style="font-weight:600;">Belum ada catatan progres latihan</p>
-            <p style="font-size:0.85rem; margin-top:4px;">Catatan sesi dan evaluasi dari pelatih akan muncul di sini setelah sesi selesai.</p>
+            <p style="font-weight:600;">Belum ada catatan progres latihan di database</p>
+            <p style="font-size:0.85rem; margin-top:4px;">Catatan sesi dan evaluasi dari pelatih akan otomatis tersinkronisasi ke sini.</p>
           </div>
         `;
       } else {
@@ -447,10 +452,9 @@
       document.getElementById("btnCancelEdit").style.display = "none";
     }
 
-    function saveEditedProfile() {
-      const users = DB.getUsers();
-      const idx = users.findIndex(u => u.id === session.id);
-      if (idx === -1) return;
+    async function saveEditedProfile() {
+      const user = getCurrentUser();
+      if (!user) return;
 
       const newName = document.getElementById("edit_name").value.trim();
       if (!newName) {
@@ -458,21 +462,30 @@
         return;
       }
 
-      users[idx].name = newName;
-      users[idx].phone = document.getElementById("edit_phone").value.trim();
-      users[idx].notes = document.getElementById("edit_notes").value.trim();
-      DB.saveUsers(users);
+      const saveBtn = document.getElementById("btnSaveEdit");
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Menyimpan ke Neon...";
+
+      user.name = newName;
+      user.phone = document.getElementById("edit_phone").value.trim();
+      user.notes = document.getElementById("edit_notes").value.trim();
+
+      // Flow update to Neon Cloud
+      await DB.updateUser(user);
 
       session.name = newName;
       DB.setSession(session);
       document.getElementById("welcomeName").textContent = `Selamat Datang, ${newName}`;
+
+      saveBtn.disabled = false;
+      saveBtn.textContent = "✓ Simpan ke Database";
 
       cancelEditProfile();
       renderDashboard();
     }
 
     // Photo Upload
-    function handlePhotoUpload(e) {
+    async function handlePhotoUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
       if (file.size > 850000) {
@@ -480,12 +493,11 @@
         return;
       }
       const reader = new FileReader();
-      reader.onload = function(evt) {
-        const users = DB.getUsers();
-        const idx = users.findIndex(u => u.id === session.id);
-        if (idx !== -1) {
-          users[idx].photo = evt.target.result;
-          DB.saveUsers(users);
+      reader.onload = async function(evt) {
+        const user = getCurrentUser();
+        if (user) {
+          user.photo = evt.target.result;
+          await DB.updateUser(user);
           renderDashboard();
         }
       };
@@ -543,7 +555,7 @@
       window.location.href = "index.html";
     }
 
-    renderDashboard();
+    initDashboard();
   </script>
 </body>
 </html>

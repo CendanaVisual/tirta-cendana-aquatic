@@ -7,7 +7,6 @@
   <link rel="icon" type="image/png" href="assets/logo.png" />
   <link rel="stylesheet" href="css/style.css" />
   <style>
-    /* Specific styling for login and onboarding transitions */
     .login-wrapper {
       min-height: 100vh;
       display: flex;
@@ -25,6 +24,8 @@
       align-items: center;
       gap: 12px;
       z-index: 50;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
     .login-container {
       width: 100%;
@@ -102,8 +103,11 @@
 </head>
 <body>
 
-  <!-- Top Controls: Theme Switcher -->
+  <!-- Top Controls: Theme Switcher & Neon DB Status -->
   <div class="top-bar-login">
+    <div class="neon-status-badge badge-online">
+      <span class="status-dot online"></span> <span>Neon Database Terhubung</span>
+    </div>
     <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Ganti Tema">
       <span class="theme-icon">🌙</span> <span class="theme-text">Gelap</span>
     </button>
@@ -140,12 +144,12 @@
 
         <div id="alertMsg"></div>
 
-        <!-- FORM: LOGIN STANDARD (Jika data user sudah ada) -->
+        <!-- FORM: LOGIN STANDARD -->
         <form id="loginForm">
           <div class="form-group">
             <label for="namaSelect">Nama Pengguna / Akun</label>
             <select id="namaSelect" required>
-              <option value="">-- Pilih Akun Anda --</option>
+              <option value="">-- Memuat data dari database... --</option>
             </select>
           </div>
 
@@ -160,7 +164,7 @@
                 required 
               />
               <button type="button" class="btn-toggle-eye" id="toggleLoginPassword" aria-label="Lihat kata sandi">
-                <!-- SVG injected via js -->
+                <!-- SVG via JS -->
               </button>
             </div>
           </div>
@@ -171,11 +175,11 @@
           </button>
         </form>
 
-        <!-- FORM: FIRST-TIME SETUP ADMIN (Muncul otomatis jika belum ada user sama sekali) -->
+        <!-- FORM: FIRST-TIME SETUP ADMIN -->
         <div id="firstTimeSetup" class="hidden">
           <div style="background:var(--blue-surface); border:1px solid var(--blue); padding:12px 16px; border-radius:12px; margin-bottom:18px; font-size:0.85rem; color:var(--text-main);">
-            <strong style="color:var(--gold);">⚡ Sistem Siap Digunakan</strong><br>
-            Belum ada akun tersimpan. Silakan daftarkan akun <b>Administrator Utama</b> pertama untuk memulai.
+            <strong style="color:var(--gold);">⚡ Database Neon Siap Digunakan</strong><br>
+            Belum ada akun di database. Daftarkan akun <b>Administrator Utama</b> pertama untuk mengalirkan data ke Neon Postgres.
           </div>
 
           <form id="setupAdminForm" onsubmit="handleFirstTimeSetup(event)">
@@ -199,13 +203,13 @@
                   required 
                 />
                 <button type="button" class="btn-toggle-eye" id="toggleAdminPassword" aria-label="Lihat kata sandi">
-                  <!-- SVG injected via js -->
+                  <!-- SVG via JS -->
                 </button>
               </div>
             </div>
 
-            <button type="submit" class="btn-gold btn-submit-login">
-              <span>Buat Akun Admin & Mulai</span>
+            <button type="submit" class="btn-gold btn-submit-login" id="btnSubmitSetup">
+              <span>Buat Akun & Alirkan ke Neon</span>
               <span style="font-size:1.1rem; line-height:1;">✓</span>
             </button>
           </form>
@@ -214,7 +218,7 @@
       </div>
 
       <div class="card-footer-info">
-        <p>© 2026 Tirta Cendana Aquatic • Les Renang Eksklusif Bali</p>
+        <p>© 2026 Tirta Cendana Aquatic • Cloud Database by Neon PostgreSQL</p>
       </div>
 
     </div>
@@ -222,48 +226,60 @@
 
   <script src="js/app.js"></script>
   <script>
-    // Initialize eye toggles
     setupPasswordToggle("#passwordInput", "#toggleLoginPassword");
     setupPasswordToggle("#adminPasswordInput", "#toggleAdminPassword");
 
-    const users = DB.getUsers();
     const select = document.getElementById("namaSelect");
     const loginForm = document.getElementById("loginForm");
     const firstTimeSetup = document.getElementById("firstTimeSetup");
     const cardTitle = document.getElementById("cardTitle");
     const cardSubtitle = document.getElementById("cardSubtitle");
 
-    // Check if system has users
-    if (!users || users.length === 0) {
-      // First-time setup mode
-      loginForm.classList.add("hidden");
-      firstTimeSetup.classList.remove("hidden");
-      cardTitle.textContent = "Inisialisasi Sistem";
-      cardSubtitle.textContent = "Buat akun Administrator pertama untuk mengelola portal";
-    } else {
-      // Normal login mode: Populate select dropdown
-      users.forEach(u => {
-        const opt = document.createElement("option");
-        opt.value = u.name;
-        opt.textContent = `${u.name} (${u.role === 'admin' ? 'Admin' : 'Peserta'})`;
-        select.appendChild(opt);
-      });
+    // Initialize application and synchronize with Neon
+    async function init() {
+      // Sync with Neon Database
+      await DB.sync();
+      const users = DB.getUsers();
+
+      if (!users || users.length === 0) {
+        // First-time setup
+        loginForm.classList.add("hidden");
+        firstTimeSetup.classList.remove("hidden");
+        cardTitle.textContent = "Inisialisasi Sistem Cloud";
+        cardSubtitle.textContent = "Buat akun Administrator pertama untuk mengalirkan data ke Neon";
+      } else {
+        loginForm.classList.remove("hidden");
+        firstTimeSetup.classList.add("hidden");
+        cardTitle.textContent = "Masuk ke Portal";
+        cardSubtitle.textContent = "Pilih akun dan masukkan kata sandi Anda";
+        
+        select.innerHTML = '<option value="">-- Pilih Akun Anda --</option>';
+        users.forEach(u => {
+          const opt = document.createElement("option");
+          opt.value = u.name;
+          opt.textContent = `${u.name} (${u.role === 'admin' ? 'Admin' : 'Peserta'})`;
+          select.appendChild(opt);
+        });
+      }
     }
 
-    // First time admin setup handler
-    function handleFirstTimeSetup(e) {
+    // First time admin setup
+    async function handleFirstTimeSetup(e) {
       e.preventDefault();
       const name = document.getElementById("adminNameInput").value.trim();
       const phone = document.getElementById("adminPhoneInput").value.trim();
       const password = document.getElementById("adminPasswordInput").value;
+      const btn = document.getElementById("btnSubmitSetup");
 
       if (!name || !password) {
         showMessage("alertMsg", "Mohon isi nama dan kata sandi.", "error");
         return;
       }
 
+      btn.disabled = true;
+      btn.innerHTML = `<span>Menyimpan ke Neon...</span>`;
+
       const newAdmin = {
-        id: 1,
         name: name,
         password: password,
         role: "admin",
@@ -272,22 +288,21 @@
         package: "-",
         quotaTotal: 0,
         quotaUsed: 0,
-        notes: "Administrator Utama Sistem",
-        photo: ""
+        notes: "Administrator Utama Sistem"
       };
 
-      DB.saveUsers([newAdmin]);
+      // Flow to Neon Cloud!
+      const saved = await DB.addUser(newAdmin);
       DB.setSession({
-        id: newAdmin.id,
-        name: newAdmin.name,
-        role: newAdmin.role
+        id: saved.id,
+        name: saved.name,
+        role: saved.role
       });
 
-      // Play card transition
-      triggerLoginTransition("admin.html", `Selamat Datang, ${newAdmin.name}!`);
+      triggerLoginTransition("admin.html", `Selamat Datang, ${saved.name}!`);
     }
 
-    // Normal Login Submission
+    // Login Submission
     loginForm.addEventListener("submit", function(e) {
       e.preventDefault();
       const nama = select.value;
@@ -298,26 +313,22 @@
 
       if (!user) {
         showMessage("alertMsg", "Nama pengguna atau kata sandi tidak cocok.", "error");
-        // Gentle shake effect on error
         const card = document.getElementById("loginCard");
         card.style.animation = "shake 0.4s ease";
         setTimeout(() => card.style.animation = "", 400);
         return;
       }
 
-      // Store session
       DB.setSession({
         id: user.id,
         name: user.name,
         role: user.role
       });
 
-      // Destination page
       const targetUrl = user.role === "admin" ? "admin.html" : "dashboard.html";
       triggerLoginTransition(targetUrl, `Halo, ${user.name}!`);
     });
 
-    // Elegant Transition Animation from Card to Dashboard
     function triggerLoginTransition(targetUrl, greeting) {
       const overlay = document.getElementById("transitionOverlay");
       const statusText = document.getElementById("statusText");
@@ -334,6 +345,8 @@
         window.location.href = targetUrl;
       }, 1000);
     }
+
+    init();
   </script>
 </body>
 </html>
