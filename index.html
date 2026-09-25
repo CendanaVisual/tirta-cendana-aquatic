@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tirta Cendana Aquatic | Portal Masuk</title>
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Specific styling for login and onboarding transitions */
+    .login-wrapper {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+      position: relative;
+    }
+    .top-bar-login {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 50;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border: 1px solid var(--blue);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    [data-theme="dark"] .hero-badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border-color: rgba(56, 189, 248, 0.35);
+    }
+    .card-footer-info {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .btn-submit-login {
+      width: 100%;
+      margin-top: 8px;
+      padding: 13px;
+      font-size: 0.95rem;
+    }
+    .portal-transition-overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--card-bg);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 18px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 20;
+      padding: 24px;
+      text-align: center;
+      border: 2px solid var(--gold-bright);
+      box-shadow: 0 0 35px var(--gold-glow);
+    }
+    .portal-transition-overlay.show {
+      display: flex;
+      animation: modalPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .status-text {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-main);
+    }
+    .status-sub {
+      font-size: 0.82rem;
+      color: var(--gold);
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controls: Theme Switcher -->
+  <div class="top-bar-login">
+    <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Ganti Tema">
+      <span class="theme-icon">🌙</span> <span class="theme-text">Gelap</span>
+    </button>
+  </div>
+
+  <div class="login-wrapper">
+    <div class="login-container">
+      
+      <!-- Brand Logo Header -->
+      <div class="login-logo-wrap">
+        <img src="assets/logo.png" alt="Tirta Cendana Aquatic" class="brand-logo-img-large" />
+        <div class="hero-badge">Les Renang Premium • Bali</div>
+        <h1>Tirta Cendana</h1>
+        <p class="tagline-gold">Aquatic</p>
+        <div class="gold-divider"></div>
+      </div>
+
+      <!-- MAIN CARD: LOGIN -->
+      <div class="card login-card" id="loginCard">
+        
+        <!-- Animated Transition Overlay when logging in -->
+        <div class="portal-transition-overlay" id="transitionOverlay">
+          <div class="portal-spinner"></div>
+          <div>
+            <div class="status-text" id="statusText">Memverifikasi Akun...</div>
+            <div class="status-sub">Mempersiapkan Dashboard Tirta Cendana</div>
+          </div>
+        </div>
+
+        <h2 style="text-align:center; font-size:1.4rem; margin-bottom:6px;" id="cardTitle">Masuk ke Portal</h2>
+        <p style="text-align:center; font-size:0.85rem; color:var(--text-muted); margin-bottom:22px;" id="cardSubtitle">
+          Pilih akun dan masukkan kata sandi Anda
+        </p>
+
+        <div id="alertMsg"></div>
+
+        <!-- FORM: LOGIN STANDARD (Jika data user sudah ada) -->
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="namaSelect">Nama Pengguna / Akun</label>
+            <select id="namaSelect" required>
+              <option value="">-- Pilih Akun Anda --</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="passwordInput">Kata Sandi</label>
+            <div class="password-field-wrapper">
+              <input 
+                type="password" 
+                id="passwordInput" 
+                placeholder="Ketik kata sandi Anda" 
+                autocomplete="current-password" 
+                required 
+              />
+              <button type="button" class="btn-toggle-eye" id="toggleLoginPassword" aria-label="Lihat kata sandi">
+                <!-- SVG injected via js -->
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-gold btn-submit-login" id="btnSubmitLogin">
+            <span>Masuk ke Akun</span>
+            <span style="font-size:1.1rem; line-height:1;">➔</span>
+          </button>
+        </form>
+
+        <!-- FORM: FIRST-TIME SETUP ADMIN (Muncul otomatis jika belum ada user sama sekali) -->
+        <div id="firstTimeSetup" class="hidden">
+          <div style="background:var(--blue-surface); border:1px solid var(--blue); padding:12px 16px; border-radius:12px; margin-bottom:18px; font-size:0.85rem; color:var(--text-main);">
+            <strong style="color:var(--gold);">⚡ Sistem Siap Digunakan</strong><br>
+            Belum ada akun tersimpan. Silakan daftarkan akun <b>Administrator Utama</b> pertama untuk memulai.
+          </div>
+
+          <form id="setupAdminForm" onsubmit="handleFirstTimeSetup(event)">
+            <div class="form-group">
+              <label for="adminNameInput">Nama Lengkap Administrator *</label>
+              <input type="text" id="adminNameInput" placeholder="Contoh: Admin Tirta Cendana" required />
+            </div>
+
+            <div class="form-group">
+              <label for="adminPhoneInput">Nomor WhatsApp / HP</label>
+              <input type="tel" id="adminPhoneInput" placeholder="08xxxxxxxxxx" />
+            </div>
+
+            <div class="form-group">
+              <label for="adminPasswordInput">Kata Sandi Baru *</label>
+              <div class="password-field-wrapper">
+                <input 
+                  type="password" 
+                  id="adminPasswordInput" 
+                  placeholder="Ketik kata sandi admin" 
+                  required 
+                />
+                <button type="button" class="btn-toggle-eye" id="toggleAdminPassword" aria-label="Lihat kata sandi">
+                  <!-- SVG injected via js -->
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-gold btn-submit-login">
+              <span>Buat Akun Admin & Mulai</span>
+              <span style="font-size:1.1rem; line-height:1;">✓</span>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <div class="card-footer-info">
+        <p>© 2026 Tirta Cendana Aquatic • Les Renang Eksklusif Bali</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Initialize eye toggles
+    setupPasswordToggle("#passwordInput", "#toggleLoginPassword");
+    setupPasswordToggle("#adminPasswordInput", "#toggleAdminPassword");
+
+    const users = DB.getUsers();
+    const select = document.getElementById("namaSelect");
+    const loginForm = document.getElementById("loginForm");
+    const firstTimeSetup = document.getElementById("firstTimeSetup");
+    const cardTitle = document.getElementById("cardTitle");
+    const cardSubtitle = document.getElementById("cardSubtitle");
+
+    // Check if system has users
+    if (!users || users.length === 0) {
+      // First-time setup mode
+      loginForm.classList.add("hidden");
+      firstTimeSetup.classList.remove("hidden");
+      cardTitle.textContent = "Inisialisasi Sistem";
+      cardSubtitle.textContent = "Buat akun Administrator pertama untuk mengelola portal";
+    } else {
+      // Normal login mode: Populate select dropdown
+      users.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u.name;
+        opt.textContent = `${u.name} (${u.role === 'admin' ? 'Admin' : 'Peserta'})`;
+        select.appendChild(opt);
+      });
+    }
+
+    // First time admin setup handler
+    function handleFirstTimeSetup(e) {
+      e.preventDefault();
+      const name = document.getElementById("adminNameInput").value.trim();
+      const phone = document.getElementById("adminPhoneInput").value.trim();
+      const password = document.getElementById("adminPasswordInput").value;
+
+      if (!name || !password) {
+        showMessage("alertMsg", "Mohon isi nama dan kata sandi.", "error");
+        return;
+      }
+
+      const newAdmin = {
+        id: 1,
+        name: name,
+        password: password,
+        role: "admin",
+        phone: phone || "-",
+        level: "Admin",
+        package: "-",
+        quotaTotal: 0,
+        quotaUsed: 0,
+        notes: "Administrator Utama Sistem",
+        photo: ""
+      };
+
+      DB.saveUsers([newAdmin]);
+      DB.setSession({
+        id: newAdmin.id,
+        name: newAdmin.name,
+        role: newAdmin.role
+      });
+
+      // Play card transition
+      triggerLoginTransition("admin.html", `Selamat Datang, ${newAdmin.name}!`);
+    }
+
+    // Normal Login Submission
+    loginForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      const nama = select.value;
+      const password = document.getElementById("passwordInput").value;
+      
+      const userList = DB.getUsers();
+      const user = userList.find(u => u.name === nama && u.password === password);
+
+      if (!user) {
+        showMessage("alertMsg", "Nama pengguna atau kata sandi tidak cocok.", "error");
+        // Gentle shake effect on error
+        const card = document.getElementById("loginCard");
+        card.style.animation = "shake 0.4s ease";
+        setTimeout(() => card.style.animation = "", 400);
+        return;
+      }
+
+      // Store session
+      DB.setSession({
+        id: user.id,
+        name: user.name,
+        role: user.role
+      });
+
+      // Destination page
+      const targetUrl = user.role === "admin" ? "admin.html" : "dashboard.html";
+      triggerLoginTransition(targetUrl, `Halo, ${user.name}!`);
+    });
+
+    // Elegant Transition Animation from Card to Dashboard
+    function triggerLoginTransition(targetUrl, greeting) {
+      const overlay = document.getElementById("transitionOverlay");
+      const statusText = document.getElementById("statusText");
+      const loginCard = document.getElementById("loginCard");
+
+      statusText.textContent = greeting;
+      overlay.classList.add("show");
+
+      setTimeout(() => {
+        loginCard.classList.add("transitioning-out");
+      }, 500);
+
+      setTimeout(() => {
+        window.location.href = targetUrl;
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Peserta | Tirta Cendana Aquatic</title>
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Specific dashboard enhancements */
+    main {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      animation: fadeIn 0.45s ease-out;
+    }
+    .welcome-header {
+      margin-bottom: 28px;
+    }
+    .welcome-header h2 {
+      font-size: 1.85rem;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+    .welcome-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px 16px;
+      text-align: center;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold-bright);
+    }
+    .stat-card .num {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1.2;
+    }
+    .stat-card .label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .profile-layout {
+      display: flex;
+      gap: 28px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .photo-area {
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .avatar-circle {
+      width: 116px;
+      height: 116px;
+      border-radius: 50%;
+      background: var(--input-bg);
+      border: 3px solid var(--gold-bright);
+      box-shadow: 0 0 18px var(--gold-glow);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+    .avatar-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      font-size: 0.92rem;
+      flex: 1;
+      min-width: 240px;
+    }
+    .profile-field span {
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .profile-field p {
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .quota-track {
+      height: 10px;
+      background: rgba(2, 132, 199, 0.12);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 12px 0 8px;
+      border: 1px solid var(--table-border);
+    }
+    .quota-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--gold-bright));
+      border-radius: 6px;
+      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .lesson-card {
+      background: var(--card-inner);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .lesson-card:hover {
+      transform: translateX(4px);
+      border-color: var(--gold-bright);
+    }
+    .lesson-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .lesson-meta {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .score-badge-high { color: #16a34a; font-weight: 700; }
+    [data-theme="dark"] .score-badge-high { color: #4ade80; }
+    .score-badge-mid { color: var(--gold); font-weight: 700; }
+    .score-badge-low { color: #ef4444; font-weight: 700; }
+
+    .comment-card {
+      background: var(--card-inner);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 0.92rem;
+      line-height: 1.6;
+      color: var(--text-main);
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 640px) {
+      .profile-info-grid {
+        grid-template-columns: 1fr;
+      }
+      .profile-layout {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <img src="assets/logo.png" alt="Tirta Cendana Logo" class="header-logo-img" />
+        <div class="brand-text">
+          <h1>Tirta Cendana</h1>
+          <span>Aquatic Portal</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Ganti Tema">
+          <span class="theme-icon">🌙</span> <span class="theme-text">Gelap</span>
+        </button>
+        <span id="headerUserName" style="font-size:0.88rem; font-weight:600; color:var(--text-secondary); display:none;" class="desktop-only"></span>
+        <button class="btn-logout" onclick="handleLogout()">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="welcome-header">
+      <h2 id="welcomeName">Selamat Datang</h2>
+      <p>Pantau detail profil, sisa kuota latihan renang, dan catatan evaluasi pelatih Anda</p>
+    </div>
+
+    <!-- QUICK STATS -->
+    <div class="stats-grid" id="statsContainer"></div>
+
+    <!-- PROFIL PESERTA -->
+    <div class="card">
+      <h3 style="font-size:1.25rem; margin-bottom:20px; display:flex; align-items:center; gap:10px;">
+        <span>👤</span> <span>Profil Peserta</span>
+      </h3>
+
+      <div class="profile-layout">
+        <div class="photo-area">
+          <div class="avatar-circle" id="avatarCircle">
+            <span id="avatarPlaceholder">👤</span>
+            <img id="avatarImage" style="display:none;" alt="Foto Profil" />
+          </div>
+          <label class="btn-outline btn-sm" style="cursor:pointer; display:inline-flex;">
+            <span>📷 Ganti Foto</span>
+            <input type="file" id="photoInput" accept="image/*" style="display:none;" onchange="handlePhotoUpload(event)" />
+          </label>
+        </div>
+
+        <div style="flex:1; min-width:240px;">
+          <!-- View Mode -->
+          <div class="profile-info-grid" id="profileViewGrid"></div>
+
+          <!-- Edit Mode -->
+          <div class="profile-info-grid" id="profileEditGrid" style="display:none;"></div>
+
+          <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn-outline btn-sm" id="btnStartEdit" onclick="startEditProfile()">✏️ Edit Profil</button>
+            <button class="btn-gold btn-sm" id="btnSaveEdit" style="display:none;" onclick="saveEditedProfile()">✓ Simpan Perubahan</button>
+            <button class="btn-outline btn-sm" id="btnCancelEdit" style="display:none;" onclick="cancelEditProfile()">Batal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KUOTA PERTEMUAN -->
+    <div class="card">
+      <h3 style="font-size:1.25rem; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+        <span>🎫</span> <span>Status Kuota Pertemuan</span>
+      </h3>
+      <div id="quotaContainer"></div>
+    </div>
+
+    <!-- PROGRES LATIHAN & EVALUASI -->
+    <div class="card">
+      <h3 style="font-size:1.25rem; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
+        <span>📈</span> <span>Riwayat Latihan & Catatan Pelatih</span>
+      </h3>
+      <div id="progressListContainer"></div>
+    </div>
+  </main>
+
+  <!-- MODAL DETAIL EVALUASI -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal">
+      <h3>
+        <span id="modalTopic">Detail Latihan</span>
+        <button class="close" onclick="closeDetailModal()">&times;</button>
+      </h3>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Authentication guard
+    const session = DB.getSession();
+    if (!session || session.role !== "peserta") {
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("welcomeName").textContent = `Selamat Datang, ${session.name}`;
+
+    function getCurrentUser() {
+      return DB.getUsers().find(u => u.id === session.id);
+    }
+
+    function getCurrentProgress() {
+      return DB.getProgress().filter(p => p.userId === session.id);
+    }
+
+    // Render Dashboard
+    function renderDashboard() {
+      const user = getCurrentUser();
+      if (!user) {
+        alert("Sesi akun tidak ditemukan. Silakan masuk kembali.");
+        handleLogout();
+        return;
+      }
+
+      const progressList = getCurrentProgress();
+      const sisaKuota = Math.max(0, (user.quotaTotal || 0) - (user.quotaUsed || 0));
+      const avgScore = progressList.length
+        ? Math.round(progressList.reduce((acc, curr) => acc + (curr.score || 0), 0) / progressList.length)
+        : "-";
+
+      // 1. Stats
+      document.getElementById("statsContainer").innerHTML = `
+        <div class="stat-card">
+          <div class="num">${user.level || "Pemula"}</div>
+          <div class="label">Level Kemampuan</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${user.package || "Reguler"}</div>
+          <div class="label">Paket Program</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${sisaKuota}</div>
+          <div class="label">Sisa Pertemuan</div>
+        </div>
+        <div class="stat-card">
+          <div class="num">${avgScore}${avgScore !== "-" ? "%" : ""}</div>
+          <div class="label">Rata-rata Evaluasi</div>
+        </div>
+      `;
+
+      // 2. Avatar
+      const avatarImg = document.getElementById("avatarImage");
+      const avatarPlaceholder = document.getElementById("avatarPlaceholder");
+      if (user.photo) {
+        avatarImg.src = user.photo;
+        avatarImg.style.display = "block";
+        avatarPlaceholder.style.display = "none";
+      } else {
+        avatarImg.style.display = "none";
+        avatarPlaceholder.style.display = "block";
+      }
+
+      // 3. Profile Info
+      document.getElementById("profileViewGrid").innerHTML = `
+        <div class="profile-field"><span>Nama Lengkap</span><p>${user.name}</p></div>
+        <div class="profile-field"><span>No. Telepon / WhatsApp</span><p>${user.phone || "-"}</p></div>
+        <div class="profile-field"><span>Tingkat Level</span><p>${user.level || "-"}</p></div>
+        <div class="profile-field"><span>Paket Les</span><p>${user.package || "-"}</p></div>
+        <div class="profile-field" style="grid-column:1/-1;"><span>Catatan Tambahan</span><p>${user.notes || "-"}</p></div>
+      `;
+
+      // 4. Quota Bar
+      const used = user.quotaUsed || 0;
+      const total = user.quotaTotal || 0;
+      const percentage = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0;
+      
+      document.getElementById("quotaContainer").innerHTML = `
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.92rem; font-weight:600;">
+            <span style="color:var(--text-main);">${user.package || "Paket Pertemuan"}</span>
+            <span style="color:var(--text-muted); font-size:0.85rem;">${used} dari ${total} sesi terpakai</span>
+          </div>
+          <div class="quota-track">
+            <div class="quota-progress" style="width: ${percentage}%"></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.84rem; color:var(--text-muted); margin-top:6px;">
+            <span>Sisa Pertemuan: <strong style="color:var(--gold); font-size:0.95rem;">${sisaKuota} kali</strong></span>
+            <span>${percentage}% Tercapai</span>
+          </div>
+        </div>
+      `;
+
+      // 5. Progress History
+      const progressContainer = document.getElementById("progressListContainer");
+      if (progressList.length === 0) {
+        progressContainer.innerHTML = `
+          <div style="text-align:center; padding:30px 10px; color:var(--text-muted);">
+            <div style="font-size:2rem; margin-bottom:8px;">🌊</div>
+            <p style="font-weight:600;">Belum ada catatan progres latihan</p>
+            <p style="font-size:0.85rem; margin-top:4px;">Catatan sesi dan evaluasi dari pelatih akan muncul di sini setelah sesi selesai.</p>
+          </div>
+        `;
+      } else {
+        const sorted = [...progressList].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+        progressContainer.innerHTML = sorted.map(p => {
+          let scoreClass = "score-badge-high";
+          if (p.score < 60) scoreClass = "score-badge-low";
+          else if (p.score < 80) scoreClass = "score-badge-mid";
+
+          return `
+            <div class="lesson-card">
+              <div>
+                <div class="lesson-title">${p.skill || "Latihan Renang"}</div>
+                <div class="lesson-meta">
+                  <span>📅 ${p.date || "-"}</span>
+                  <span>⏱️ ${p.duration || 0} Menit</span>
+                  ${p.score != null ? `<span>⭐ Nilai: <span class="${scoreClass}">${p.score}%</span></span>` : ""}
+                  ${p.coach ? `<span>🏊 Pelatih: ${p.coach}</span>` : ""}
+                </div>
+              </div>
+              <button class="btn-outline-blue btn-sm" onclick="openDetailModal(${p.id})">
+                Evaluasi Lengkap ➔
+              </button>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    // Profile Edit
+    function startEditProfile() {
+      const user = getCurrentUser();
+      document.getElementById("profileViewGrid").style.display = "none";
+      const editGrid = document.getElementById("profileEditGrid");
+      editGrid.style.display = "grid";
+
+      document.getElementById("btnStartEdit").style.display = "none";
+      document.getElementById("btnSaveEdit").style.display = "inline-flex";
+      document.getElementById("btnCancelEdit").style.display = "inline-flex";
+
+      editGrid.innerHTML = `
+        <div class="profile-field">
+          <span>Nama Lengkap</span>
+          <input id="edit_name" value="${user.name || ""}" />
+        </div>
+        <div class="profile-field">
+          <span>No. Telepon / WhatsApp</span>
+          <input id="edit_phone" value="${user.phone || ""}" />
+        </div>
+        <div class="profile-field" style="grid-column:1/-1;">
+          <span>Catatan / Riwayat Kesehatan</span>
+          <input id="edit_notes" value="${user.notes || ""}" />
+        </div>
+      `;
+    }
+
+    function cancelEditProfile() {
+      document.getElementById("profileViewGrid").style.display = "grid";
+      document.getElementById("profileEditGrid").style.display = "none";
+      document.getElementById("btnStartEdit").style.display = "inline-flex";
+      document.getElementById("btnSaveEdit").style.display = "none";
+      document.getElementById("btnCancelEdit").style.display = "none";
+    }
+
+    function saveEditedProfile() {
+      const users = DB.getUsers();
+      const idx = users.findIndex(u => u.id === session.id);
+      if (idx === -1) return;
+
+      const newName = document.getElementById("edit_name").value.trim();
+      if (!newName) {
+        alert("Nama tidak boleh kosong.");
+        return;
+      }
+
+      users[idx].name = newName;
+      users[idx].phone = document.getElementById("edit_phone").value.trim();
+      users[idx].notes = document.getElementById("edit_notes").value.trim();
+      DB.saveUsers(users);
+
+      session.name = newName;
+      DB.setSession(session);
+      document.getElementById("welcomeName").textContent = `Selamat Datang, ${newName}`;
+
+      cancelEditProfile();
+      renderDashboard();
+    }
+
+    // Photo Upload
+    function handlePhotoUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 850000) {
+        alert("Ukuran foto maksimal ±800KB. Silakan gunakan foto yang lebih kecil.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const users = DB.getUsers();
+        const idx = users.findIndex(u => u.id === session.id);
+        if (idx !== -1) {
+          users[idx].photo = evt.target.result;
+          DB.saveUsers(users);
+          renderDashboard();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Detail Modal
+    function openDetailModal(id) {
+      const p = DB.getProgress().find(x => x.id === id);
+      if (!p) return;
+
+      let scoreClass = "score-badge-high";
+      if (p.score < 60) scoreClass = "score-badge-low";
+      else if (p.score < 80) scoreClass = "score-badge-mid";
+
+      document.getElementById("modalTopic").textContent = p.skill || "Detail Latihan";
+      document.getElementById("modalBody").innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px;">
+          <div>
+            <label>Tanggal Sesi</label>
+            <div style="font-weight:600; color:var(--text-main);">${p.date || "-"}</div>
+          </div>
+          <div>
+            <label>Pelatih / Coach</label>
+            <div style="font-weight:600; color:var(--text-main);">${p.coach || "-"}</div>
+          </div>
+          <div>
+            <label>Skor Evaluasi</label>
+            <div class="${scoreClass}" style="font-size:1.4rem; font-weight:700;">${p.score != null ? p.score + "%" : "-"}</div>
+          </div>
+          <div>
+            <label>Durasi Latihan</label>
+            <div style="font-weight:600; color:var(--text-main);">${p.duration || 0} Menit</div>
+          </div>
+        </div>
+
+        <div>
+          <label>Catatan & Evaluasi Pelatih</label>
+          <div class="comment-card">${p.notes || "Belum ada catatan evaluasi dari pelatih."}</div>
+        </div>
+      `;
+      document.getElementById("detailModal").classList.add("show");
+    }
+
+    function closeDetailModal() {
+      document.getElementById("detailModal").classList.remove("show");
+    }
+
+    document.getElementById("detailModal").addEventListener("click", function(e) {
+      if (e.target === this) closeDetailModal();
+    });
+
+    function handleLogout() {
+      DB.clearSession();
+      window.location.href = "index.html";
+    }
+
+    renderDashboard();
+  </script>
+</body>
+</html>

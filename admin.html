@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel | Tirta Cendana Aquatic</title>
+  <link rel="icon" type="image/png" href="assets/logo.png" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 20px 60px;
+      animation: fadeIn 0.45s ease-out;
+    }
+    .panel-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .panel-title h2 {
+      font-size: 1.65rem;
+      color: var(--text-main);
+    }
+    .panel-title p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .data-table-container {
+      overflow-x: auto;
+      border-radius: 14px;
+      border: 1px solid var(--table-border);
+      background: var(--card-inner);
+    }
+    .empty-state {
+      text-align: center;
+      padding: 42px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state-icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+    .backup-bar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <img src="assets/logo.png" alt="Tirta Cendana Logo" class="header-logo-img" />
+        <div class="brand-text">
+          <h1>Tirta Cendana</h1>
+          <span>Admin Portal</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="theme-toggle-btn" onclick="ThemeManager.toggle()" title="Ganti Tema">
+          <span class="theme-icon">🌙</span> <span class="theme-text">Gelap</span>
+        </button>
+        <span id="adminGreeting" style="font-size:0.86rem; font-weight:600; color:var(--text-secondary);"></span>
+        <button class="btn-logout" onclick="handleLogout()">Keluar</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="tabs">
+    <div class="tabs-inner">
+      <button class="tab active" id="tabBtnUsers" onclick="switchTab('users')">
+        👥 Kelola Peserta & Kuota
+      </button>
+      <button class="tab" id="tabBtnProgress" onclick="switchTab('progress')">
+        📈 Progres & Evaluasi Latihan
+      </button>
+      <button class="tab" id="tabBtnBackup" onclick="switchTab('backup')">
+        💾 Cadangan & Pemulihan Data
+      </button>
+    </div>
+  </div>
+
+  <main>
+    <div id="statusMessage"></div>
+
+    <!-- ==================== TAB 1: USERS & QUOTA ==================== -->
+    <div id="tab-users">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <h2>Data Peserta & Kuota Latihan</h2>
+          <p>Daftar seluruh anggota les renang aktif dan informasi paket</p>
+        </div>
+        <button class="btn-gold" onclick="openUserForm()">
+          <span>+ Tambah Peserta Baru</span>
+        </button>
+      </div>
+
+      <!-- FORM ADD/EDIT USER CARD -->
+      <div class="card hidden" id="userFormCard">
+        <h3 id="userFormTitle" style="font-size:1.3rem; margin-bottom:16px;">Tambah Peserta Baru</h3>
+        
+        <form id="userForm" onsubmit="handleSaveUser(event)">
+          <input type="hidden" id="editUserId" />
+
+          <div class="form-grid">
+            <div>
+              <label for="u_name">Nama Lengkap *</label>
+              <input type="text" id="u_name" placeholder="Nama peserta" required />
+            </div>
+
+            <div>
+              <label for="u_password">Kata Sandi *</label>
+              <div class="password-field-wrapper">
+                <input type="password" id="u_password" placeholder="Kata sandi akun" />
+                <button type="button" class="btn-toggle-eye" id="toggleUserPassword" aria-label="Lihat sandi">
+                  <!-- SVG via JS -->
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label for="u_role">Peran (Role)</label>
+              <select id="u_role">
+                <option value="peserta">Peserta</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="u_level">Tingkat Kemampuan</label>
+              <select id="u_level">
+                <option value="Pemula">Pemula (Water Orientation & Basic)</option>
+                <option value="Menengah">Menengah (Stroke Development)</option>
+                <option value="Mahir">Mahir (Stroke Refinement & Endurance)</option>
+                <option value="Atlet">Atlet (Competitive Training)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="u_package">Paket Les *</label>
+              <select id="u_package" onchange="onPackageSelectChange()">
+                <option value="Unlimited">Unlimited (10 pertemuan)</option>
+                <option value="Semi Privat">Semi Privat (4 pertemuan / bulan)</option>
+                <option value="Privat Eksklusif">Privat Eksklusif (8 pertemuan)</option>
+                <option value="Kustom">Paket Kustom</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="u_quotaTotal">Total Kuota Sesi</label>
+              <input type="number" id="u_quotaTotal" min="0" value="10" />
+            </div>
+
+            <div>
+              <label for="u_quotaUsed">Kuota Terpakai</label>
+              <input type="number" id="u_quotaUsed" min="0" value="0" />
+            </div>
+
+            <div>
+              <label for="u_phone">Nomor Telepon / WhatsApp</label>
+              <input type="tel" id="u_phone" placeholder="08xxxxxxxxxx" />
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+              <label for="u_notes">Catatan Tambahan (Usia, Riwayat Medis, dll)</label>
+              <input type="text" id="u_notes" placeholder="Catatan untuk pelatih..." />
+            </div>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:8px;">
+            <button type="submit" class="btn-gold">Simpan Data</button>
+            <button type="button" class="btn-outline" onclick="closeUserForm()">Batal</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- USERS TABLE -->
+      <div class="card" style="padding: 16px;">
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Peserta</th>
+                <th>Role</th>
+                <th>Tingkat</th>
+                <th>Paket</th>
+                <th>Kuota Pertemuan</th>
+                <th>Kontak</th>
+                <th style="text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: PROGRESS & EVALUATION ==================== -->
+    <div id="tab-progress" class="hidden">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <h2>Progres Latihan & Evaluasi Renang</h2>
+          <p>Catat materi yang dilatih, penilaian kemampuan, dan umpan balik pelatih</p>
+        </div>
+        <button class="btn-gold" onclick="openProgressForm()">
+          <span>+ Catat Progres Latihan</span>
+        </button>
+      </div>
+
+      <!-- PROGRESS FORM CARD -->
+      <div class="card hidden" id="progressFormCard">
+        <h3 style="font-size:1.3rem; margin-bottom:16px;">Input Evaluasi Latihan Baru</h3>
+        
+        <form id="progressForm" onsubmit="handleSaveProgress(event)">
+          <div class="form-grid">
+            <div>
+              <label for="p_userId">Pilih Peserta *</label>
+              <select id="p_userId" required></select>
+            </div>
+
+            <div>
+              <label for="p_skill">Materi / Skill Latihan *</label>
+              <input type="text" id="p_skill" placeholder="Contoh: Freestyle Kicking & Breathing" required />
+            </div>
+
+            <div>
+              <label for="p_score">Skor Penilaian (0 - 100)</label>
+              <input type="number" id="p_score" min="0" max="100" placeholder="Contoh: 75" />
+            </div>
+
+            <div>
+              <label for="p_duration">Durasi Sesi (Menit)</label>
+              <input type="number" id="p_duration" min="0" value="45" />
+            </div>
+
+            <div>
+              <label for="p_date">Tanggal Sesi</label>
+              <input type="date" id="p_date" required />
+            </div>
+
+            <div>
+              <label for="p_coach">Pelatih Bertugas</label>
+              <input type="text" id="p_coach" placeholder="Contoh: Coach Made" />
+            </div>
+
+            <div style="grid-column: 1 / -1;">
+              <label for="p_notes">Catatan & Umpan Balik untuk Peserta *</label>
+              <textarea id="p_notes" rows="3" placeholder="Tuliskan evaluasi gerakan, capaian, dan PR latihan selanjutnya..."></textarea>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:14px; margin-top:8px;">
+            <div style="display:flex; gap:12px;">
+              <button type="submit" class="btn-gold">Simpan Evaluasi</button>
+              <button type="button" class="btn-outline" onclick="closeProgressForm()">Batal</button>
+            </div>
+
+            <label style="display:inline-flex; align-items:center; gap:8px; font-size:0.88rem; cursor:pointer; color:var(--text-main); margin-bottom:0;">
+              <input type="checkbox" id="p_deductQuota" checked style="width:auto; margin:0;" />
+              <span>Otomatis kurangi 1 kuota pertemuan peserta</span>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- PROGRESS TABLE -->
+      <div class="card" style="padding: 16px;">
+        <div class="data-table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Peserta</th>
+                <th>Skill / Materi</th>
+                <th>Skor</th>
+                <th>Pelatih</th>
+                <th>Catatan Evaluasi</th>
+                <th style="text-align: right;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="progressTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: BACKUP & RESTORE ==================== -->
+    <div id="tab-backup" class="hidden">
+      <div class="panel-header-row">
+        <div class="panel-title">
+          <h2>Cadangan & Pemulihan Data (Backup & Restore)</h2>
+          <p>Unduh seluruh data peserta dan progres dalam format JSON yang aman</p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="card">
+          <h3 style="font-size:1.2rem; margin-bottom:12px;">💾 Ekspor Data (Backup)</h3>
+          <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:20px;">
+            Simpan salinan cadangan semua peserta, riwayat sesi, dan pengaturan kuota ke komputer Anda.
+          </p>
+          <button class="btn-gold" onclick="exportDataToFile()">
+            <span>📥 Unduh Berkas Backup (.json)</span>
+          </button>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size:1.2rem; margin-bottom:12px;">📂 Impor Data (Restore)</h3>
+          <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:20px;">
+            Pulihkan data dari berkas cadangan JSON yang sebelumnya pernah diunduh.
+          </p>
+          <label class="btn-outline" style="cursor:pointer; display:inline-flex;">
+            <span>📤 Pilih Berkas Cadangan (.json)</span>
+            <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importDataFromFile(event)" />
+          </label>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Authentication guard for Admin
+    const session = DB.getSession();
+    if (!session || session.role !== "admin") {
+      window.location.href = "index.html";
+    }
+
+    document.getElementById("adminGreeting").textContent = `Admin: ${session.name}`;
+
+    // Initialize password eye toggle
+    setupPasswordToggle("#u_password", "#toggleUserPassword");
+
+    // Tab Switching
+    function switchTab(tabName) {
+      ["users", "progress", "backup"].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.toggle("hidden", t !== tabName);
+      });
+
+      document.getElementById("tabBtnUsers").classList.toggle("active", tabName === "users");
+      document.getElementById("tabBtnProgress").classList.toggle("active", tabName === "progress");
+      document.getElementById("tabBtnBackup").classList.toggle("active", tabName === "backup");
+
+      if (tabName === "users") renderUsersTable();
+      if (tabName === "progress") renderProgressTable();
+    }
+
+    // Auto package quota presets
+    function onPackageSelectChange() {
+      const pkg = document.getElementById("u_package").value;
+      const quotaInput = document.getElementById("u_quotaTotal");
+      if (pkg === "Unlimited") {
+        quotaInput.value = 10;
+      } else if (pkg === "Semi Privat") {
+        quotaInput.value = 4;
+      } else if (pkg === "Privat Eksklusif") {
+        quotaInput.value = 8;
+      }
+    }
+
+    // ==========================================
+    // USERS MANAGEMENT
+    // ==========================================
+    function renderUsersTable() {
+      const users = DB.getUsers();
+      const tbody = document.getElementById("usersTableBody");
+
+      if (!users || users.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="empty-state-icon">👥</div>
+                <div style="font-weight:600; font-size:1rem; margin-bottom:4px;">Belum Ada Data Peserta</div>
+                <div style="font-size:0.85rem;">Klik tombol "+ Tambah Peserta Baru" di atas untuk mendaftarkan peserta les renang pertama.</div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = users.map(u => {
+        const sisa = Math.max(0, (u.quotaTotal || 0) - (u.quotaUsed || 0));
+        return `
+          <tr>
+            <td>
+              <div style="font-weight:600; color:var(--text-main); font-size:0.95rem;">${u.name}</div>
+              ${u.notes ? `<div style="font-size:0.75rem; color:var(--text-muted);">${u.notes}</div>` : ""}
+            </td>
+            <td>
+              <span class="${u.role === 'admin' ? 'badge-admin' : 'badge-peserta'}">
+                ${u.role === 'admin' ? 'Admin' : 'Peserta'}
+              </span>
+            </td>
+            <td>${u.level || "-"}</td>
+            <td>${u.package || "-"}</td>
+            <td>
+              <span style="font-weight:600;">${u.quotaUsed || 0}/${u.quotaTotal || 0}</span>
+              <span style="color:var(--gold); font-size:0.82rem; margin-left:4px;">(sisa ${sisa})</span>
+            </td>
+            <td style="color:var(--text-muted); font-size:0.86rem;">${u.phone || "-"}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn-outline btn-sm" onclick="openEditUserForm(${u.id})" style="margin-right: 6px;">
+                Edit
+              </button>
+              ${u.id !== session.id ? `
+                <button class="btn-danger btn-sm" onclick="handleDeleteUser(${u.id}, '${u.name.replace(/'/g, "\\'")}')">
+                  Hapus
+                </button>
+              ` : `<span style="font-size:0.75rem; color:var(--text-muted);">(Akun Ini)</span>`}
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function openUserForm() {
+      document.getElementById("userFormTitle").textContent = "Tambah Peserta Baru";
+      document.getElementById("editUserId").value = "";
+      document.getElementById("userForm").reset();
+      document.getElementById("u_password").required = true;
+      document.getElementById("u_package").value = "Unlimited";
+      document.getElementById("u_quotaTotal").value = 10;
+      document.getElementById("u_quotaUsed").value = 0;
+      document.getElementById("userFormCard").classList.remove("hidden");
+      document.getElementById("u_name").focus();
+    }
+
+    function closeUserForm() {
+      document.getElementById("userFormCard").classList.add("hidden");
+    }
+
+    function openEditUserForm(id) {
+      const u = DB.getUsers().find(x => x.id === id);
+      if (!u) return;
+
+      document.getElementById("userFormTitle").textContent = `Edit Peserta: ${u.name}`;
+      document.getElementById("editUserId").value = u.id;
+      document.getElementById("u_name").value = u.name;
+      document.getElementById("u_password").value = "";
+      document.getElementById("u_password").required = false;
+      document.getElementById("u_password").placeholder = "(Biarkan kosong jika tidak diubah)";
+      document.getElementById("u_role").value = u.role;
+      document.getElementById("u_level").value = u.level || "Pemula";
+      document.getElementById("u_package").value = u.package || "Unlimited";
+      document.getElementById("u_quotaTotal").value = u.quotaTotal || 10;
+      document.getElementById("u_quotaUsed").value = u.quotaUsed || 0;
+      document.getElementById("u_phone").value = u.phone || "";
+      document.getElementById("u_notes").value = u.notes || "";
+      document.getElementById("userFormCard").classList.remove("hidden");
+      window.scrollTo({ top: 150, behavior: 'smooth' });
+    }
+
+    function handleSaveUser(e) {
+      e.preventDefault();
+      const users = DB.getUsers();
+      const editId = document.getElementById("editUserId").value;
+      const name = document.getElementById("u_name").value.trim();
+      const password = document.getElementById("u_password").value;
+
+      if (!name) {
+        showMessage("statusMessage", "Nama peserta wajib diisi.", "error");
+        return;
+      }
+
+      if (editId) {
+        // Edit mode
+        const idx = users.findIndex(u => u.id === parseInt(editId));
+        if (idx === -1) return;
+
+        users[idx].name = name;
+        if (password) users[idx].password = password;
+        users[idx].role = document.getElementById("u_role").value;
+        users[idx].level = document.getElementById("u_level").value;
+        users[idx].package = document.getElementById("u_package").value;
+        users[idx].quotaTotal = parseInt(document.getElementById("u_quotaTotal").value) || 0;
+        users[idx].quotaUsed = parseInt(document.getElementById("u_quotaUsed").value) || 0;
+        users[idx].phone = document.getElementById("u_phone").value.trim();
+        users[idx].notes = document.getElementById("u_notes").value.trim();
+
+        DB.saveUsers(users);
+        showMessage("statusMessage", `Data ${name} berhasil diperbarui.`);
+      } else {
+        // Create mode
+        if (!password) {
+          showMessage("statusMessage", "Kata sandi wajib diisi untuk akun baru.", "error");
+          return;
+        }
+        if (users.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+          showMessage("statusMessage", "Nama tersebut sudah terdaftar. Gunakan nama pembeda.", "error");
+          return;
+        }
+
+        const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
+        users.push({
+          id: newId,
+          name,
+          password,
+          role: document.getElementById("u_role").value,
+          level: document.getElementById("u_level").value,
+          package: document.getElementById("u_package").value,
+          quotaTotal: parseInt(document.getElementById("u_quotaTotal").value) || 0,
+          quotaUsed: parseInt(document.getElementById("u_quotaUsed").value) || 0,
+          phone: document.getElementById("u_phone").value.trim(),
+          notes: document.getElementById("u_notes").value.trim(),
+          photo: ""
+        });
+
+        DB.saveUsers(users);
+        showMessage("statusMessage", `Peserta ${name} berhasil ditambahkan.`);
+      }
+
+      closeUserForm();
+      renderUsersTable();
+    }
+
+    function handleDeleteUser(id, name) {
+      if (!confirm(`Konfirmasi: Apakah Anda yakin ingin menghapus "${name}" beserta seluruh riwayat latihannya?`)) return;
+
+      const remainingUsers = DB.getUsers().filter(u => u.id !== id);
+      const remainingProgress = DB.getProgress().filter(p => p.userId !== id);
+
+      DB.saveUsers(remainingUsers);
+      DB.saveProgress(remainingProgress);
+
+      showMessage("statusMessage", `Akun "${name}" telah dihapus.`);
+      renderUsersTable();
+    }
+
+    // ==========================================
+    // PROGRESS & EVALUATION MANAGEMENT
+    // ==========================================
+    function fillPesertaDropdown() {
+      const select = document.getElementById("p_userId");
+      const pesertaList = DB.getUsers().filter(u => u.role === "peserta");
+
+      if (pesertaList.length === 0) {
+        select.innerHTML = '<option value="">(Belum ada peserta terdaftar)</option>';
+        return;
+      }
+
+      select.innerHTML = '<option value="">-- Pilih Peserta --</option>' +
+        pesertaList.map(u => {
+          const sisa = Math.max(0, (u.quotaTotal || 0) - (u.quotaUsed || 0));
+          return `<option value="${u.id}">${u.name} — ${u.package || "Reguler"} (Sisa Kuota: ${sisa})</option>`;
+        }).join("");
+    }
+
+    function openProgressForm() {
+      fillPesertaDropdown();
+      document.getElementById("progressForm").reset();
+      document.getElementById("p_date").value = new Date().toISOString().slice(0, 10);
+      document.getElementById("p_deductQuota").checked = true;
+      document.getElementById("progressFormCard").classList.remove("hidden");
+      window.scrollTo({ top: 150, behavior: 'smooth' });
+    }
+
+    function closeProgressForm() {
+      document.getElementById("progressFormCard").classList.add("hidden");
+    }
+
+    function handleSaveProgress(e) {
+      e.preventDefault();
+      const userId = parseInt(document.getElementById("p_userId").value);
+      if (!userId) {
+        showMessage("statusMessage", "Silakan pilih peserta yang dievaluasi.", "error");
+        return;
+      }
+
+      const list = DB.getProgress();
+      const newId = list.length ? Math.max(...list.map(p => p.id)) + 1 : 1;
+
+      const newProgress = {
+        id: newId,
+        userId: userId,
+        skill: document.getElementById("p_skill").value.trim(),
+        score: parseInt(document.getElementById("p_score").value) || 0,
+        duration: parseInt(document.getElementById("p_duration").value) || 0,
+        date: document.getElementById("p_date").value,
+        coach: document.getElementById("p_coach").value.trim(),
+        notes: document.getElementById("p_notes").value.trim()
+      };
+
+      list.push(newProgress);
+      DB.saveProgress(list);
+
+      // Auto deduct quota if checked
+      if (document.getElementById("p_deductQuota").checked) {
+        const users = DB.getUsers();
+        const idx = users.findIndex(u => u.id === userId);
+        if (idx !== -1) {
+          users[idx].quotaUsed = (users[idx].quotaUsed || 0) + 1;
+          DB.saveUsers(users);
+        }
+      }
+
+      showMessage("statusMessage", "Catatan evaluasi latihan berhasil disimpan!");
+      closeProgressForm();
+      renderProgressTable();
+    }
+
+    function handleDeleteProgress(id) {
+      if (!confirm("Hapus catatan evaluasi latihan ini?")) return;
+      const list = DB.getProgress().filter(p => p.id !== id);
+      DB.saveProgress(list);
+      showMessage("statusMessage", "Catatan evaluasi dihapus.");
+      renderProgressTable();
+    }
+
+    function renderProgressTable() {
+      const list = DB.getProgress();
+      const users = DB.getUsers();
+      const tbody = document.getElementById("progressTableBody");
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7">
+              <div class="empty-state">
+                <div class="empty-state-icon">📈</div>
+                <div style="font-weight:600; font-size:1rem; margin-bottom:4px;">Belum Ada Data Progres Latihan</div>
+                <div style="font-size:0.85rem;">Klik "+ Catat Progres Latihan" untuk mencatat capaian dan evaluasi peserta.</div>
+              </div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = [...list]
+        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+        .map(p => {
+          const peserta = users.find(u => u.id === p.userId);
+          const pesertaName = peserta ? peserta.name : `(User ID: ${p.userId})`;
+
+          let scoreColor = "#16a34a";
+          if (p.score < 60) scoreColor = "#ef4444";
+          else if (p.score < 80) scoreColor = "var(--gold)";
+
+          const shortComment = (p.notes || "-").length > 45 ? (p.notes || "").slice(0, 45) + "…" : (p.notes || "-");
+
+          return `
+            <tr>
+              <td style="white-space:nowrap; font-size:0.86rem;">${p.date || "-"}</td>
+              <td style="font-weight:600; color:var(--text-main);">${pesertaName}</td>
+              <td>${p.skill || "-"}</td>
+              <td style="font-weight:700; color:${scoreColor};">${p.score != null ? p.score + "%" : "-"}</td>
+              <td style="color:var(--text-muted); font-size:0.86rem;">${p.coach || "-"}</td>
+              <td style="max-width:220px; font-size:0.85rem; color:var(--text-muted);" title="${(p.notes || '').replace(/"/g, '&quot;')}">
+                ${shortComment}
+              </td>
+              <td style="text-align: right;">
+                <button class="btn-danger btn-sm" onclick="handleDeleteProgress(${p.id})">Hapus</button>
+              </td>
+            </tr>
+          `;
+        }).join("");
+    }
+
+    // ==========================================
+    // BACKUP & RESTORE DATA
+    // ==========================================
+    function exportDataToFile() {
+      const data = {
+        app: "Tirta Cendana Aquatic",
+        version: "2.0",
+        exportDate: new Date().toISOString(),
+        users: DB.getUsers(),
+        progress: DB.getProgress()
+      };
+
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `tirta_cendana_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMessage("statusMessage", "Berkas cadangan berhasil diunduh.");
+    }
+
+    function importDataFromFile(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const parsed = JSON.parse(evt.target.result);
+          if (Array.isArray(parsed.users)) {
+            DB.saveUsers(parsed.users);
+          }
+          if (Array.isArray(parsed.progress)) {
+            DB.saveProgress(parsed.progress);
+          }
+          showMessage("statusMessage", "Data berhasil dipulihkan dari cadangan!");
+          renderUsersTable();
+          renderProgressTable();
+        } catch (err) {
+          showMessage("statusMessage", "Gagal membaca berkas JSON. Format tidak valid.", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function handleLogout() {
+      DB.clearSession();
+      window.location.href = "index.html";
+    }
+
+    // Initial render
+    renderUsersTable();
+  </script>
+</body>
+</html>
