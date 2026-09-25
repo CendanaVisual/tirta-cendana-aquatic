@@ -1,11 +1,10 @@
 /**
  * TIRTA CENDANA AQUATIC — Core Application Logic
- * Terhubung Langsung ke Database Cloud: Neon PostgreSQL
- * + LocalStorage Cache & Offline Fallback
+ * Penyimpanan Utama Sepenuhnya Menggunakan Database Cloud: Neon PostgreSQL
  */
 
 const NEON_CONFIG = {
-  endpoint: "https://ep-restless-dew-b3wl1pe6-pooler.c-4.ap-southeast-1.aws.neon.tech/sql",
+  endpoint: "https://api.c-4.ap-southeast-1.aws.neon.tech/sql",
   connectionString: "postgresql://neondb_owner:npg_HqueBLC1kb0s@ep-restless-dew-b3wl1pe6-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 };
 
@@ -51,26 +50,30 @@ const ThemeManager = {
 };
 
 // ==========================================
-// 2. NEON CLOUD DATABASE & DATA STORE
+// 2. NEON CLOUD DATABASE DRIVER (PRIMARY)
 // ==========================================
 const DB = {
   isCloudConnected: false,
 
-  // Execute query via Neon HTTP API
+  // Direct Query to Neon PostgreSQL via HTTP API
   async queryNeon(sql, params = []) {
     try {
       const response = await fetch(NEON_CONFIG.endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Neon-Connection-String": NEON_CONFIG.connectionString
+          "Neon-Connection-String": NEON_CONFIG.connectionString,
+          "Neon-Raw-Text-Output": "true"
         },
-        body: JSON.stringify({ query: sql, params })
+        body: JSON.stringify({
+          query: sql,
+          params: params.map(p => (p === null || p === undefined ? null : String(p)))
+        })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Neon Error: ${errorText}`);
+        throw new Error(`Neon Error ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
@@ -78,33 +81,33 @@ const DB = {
       this.updateDbStatusBadge(true);
       return data.rows || [];
     } catch (err) {
-      console.warn("Neon Database offline/unreachable, using local cache:", err.message);
+      console.warn("Neon Database connection issue:", err.message);
       this.isCloudConnected = false;
       this.updateDbStatusBadge(false);
       return null;
     }
   },
 
-  // Update DB status badge in UI if element exists
+  // Update Database Status Badge in Header
   updateDbStatusBadge(connected) {
     const badges = document.querySelectorAll(".neon-status-badge");
     badges.forEach(badge => {
       if (connected) {
         badge.className = "neon-status-badge badge-online";
-        badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Database Terkoneksi</span>`;
+        badge.innerHTML = `<span class="status-dot online"></span> <span>Neon Database Terhubung</span>`;
         badge.setAttribute("title", "Terhubung langsung ke Neon PostgreSQL (Cloud)");
       } else {
         badge.className = "neon-status-badge badge-offline";
         badge.innerHTML = `<span class="status-dot offline"></span> <span>Mode Penyimpanan Lokal</span>`;
-        badge.setAttribute("title", "Koneksi cloud terputus, menggunakan memori lokal");
+        badge.setAttribute("title", "Menghubungkan ke database Neon...");
       }
     });
   },
 
-  // Synchronize data from Neon Cloud into local cache
+  // Synchronize Cloud Neon Data into memory & local cache
   async sync() {
     try {
-      // 1. Fetch Users
+      // 1. Fetch All Users from Neon Cloud
       const cloudUsers = await this.queryNeon(`
         SELECT id, name, password, role, level, package, 
                quota_total as "quotaTotal", quota_used as "quotaUsed", 
@@ -113,11 +116,17 @@ const DB = {
         ORDER BY id ASC;
       `);
 
-      if (cloudUsers) {
-        localStorage.setItem(APP_KEYS.USERS, JSON.stringify(cloudUsers));
+      if (cloudUsers && Array.isArray(cloudUsers)) {
+        const parsedUsers = cloudUsers.map(u => ({
+          ...u,
+          id: parseInt(u.id),
+          quotaTotal: parseInt(u.quotaTotal) || 0,
+          quotaUsed: parseInt(u.quotaUsed) || 0
+        }));
+        localStorage.setItem(APP_KEYS.USERS, JSON.stringify(parsedUsers));
       }
 
-      // 2. Fetch Progress
+      // 2. Fetch All Progress from Neon Cloud
       const cloudProgress = await this.queryNeon(`
         SELECT id, user_id as "userId", progress_date as "date", 
                skill, score, duration, coach, notes
@@ -125,8 +134,15 @@ const DB = {
         ORDER BY progress_date DESC, id DESC;
       `);
 
-      if (cloudProgress) {
-        localStorage.setItem(APP_KEYS.PROGRESS, JSON.stringify(cloudProgress));
+      if (cloudProgress && Array.isArray(cloudProgress)) {
+        const parsedProgress = cloudProgress.map(p => ({
+          ...p,
+          id: parseInt(p.id),
+          userId: parseInt(p.userId),
+          score: p.score != null ? parseInt(p.score) : null,
+          duration: parseInt(p.duration) || 0
+        }));
+        localStorage.setItem(APP_KEYS.PROGRESS, JSON.stringify(parsedProgress));
       }
 
       return true;
@@ -136,7 +152,7 @@ const DB = {
     }
   },
 
-  // GET USERS (from cache / synchronized)
+  // GET USERS
   getUsers() {
     try {
       return JSON.parse(localStorage.getItem(APP_KEYS.USERS) || "[]");
@@ -145,9 +161,8 @@ const DB = {
     }
   },
 
-  // ADD USER (Neon + Cache)
+  // ADD USER (Direct to Neon Cloud)
   async addUser(user) {
-    // 1. Try Neon Cloud
     const rows = await this.queryNeon(`
       INSERT INTO users (name, password, role, level, package, quota_total, quota_used, phone, notes, photo)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -166,7 +181,7 @@ const DB = {
     ]);
 
     const users = this.getUsers();
-    const newId = rows && rows[0] ? rows[0].id : (users.length ? Math.max(...users.map(u => u.id)) + 1 : 1);
+    const newId = rows && rows[0] ? parseInt(rows[0].id) : (users.length ? Math.max(...users.map(u => u.id)) + 1 : 1);
     user.id = newId;
 
     users.push(user);
@@ -174,7 +189,7 @@ const DB = {
     return user;
   },
 
-  // UPDATE USER (Neon + Cache)
+  // UPDATE USER (Direct to Neon Cloud)
   async updateUser(user) {
     await this.queryNeon(`
       UPDATE users 
@@ -205,7 +220,7 @@ const DB = {
     }
   },
 
-  // DELETE USER (Neon + Cache)
+  // DELETE USER (Direct to Neon Cloud)
   async deleteUser(id) {
     await this.queryNeon("DELETE FROM users WHERE id = $1;", [id]);
 
@@ -224,7 +239,7 @@ const DB = {
     }
   },
 
-  // ADD PROGRESS (Neon + Cache)
+  // ADD PROGRESS (Direct to Neon Cloud)
   async addProgress(item) {
     const rows = await this.queryNeon(`
       INSERT INTO progress (user_id, progress_date, skill, score, duration, coach, notes)
@@ -241,7 +256,7 @@ const DB = {
     ]);
 
     const list = this.getProgress();
-    const newId = rows && rows[0] ? rows[0].id : (list.length ? Math.max(...list.map(p => p.id)) + 1 : 1);
+    const newId = rows && rows[0] ? parseInt(rows[0].id) : (list.length ? Math.max(...list.map(p => p.id)) + 1 : 1);
     item.id = newId;
 
     list.push(item);
@@ -249,7 +264,7 @@ const DB = {
     return item;
   },
 
-  // DELETE PROGRESS (Neon + Cache)
+  // DELETE PROGRESS (Direct to Neon Cloud)
   async deleteProgress(id) {
     await this.queryNeon("DELETE FROM progress WHERE id = $1;", [id]);
 
